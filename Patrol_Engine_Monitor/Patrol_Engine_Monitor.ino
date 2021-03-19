@@ -208,7 +208,7 @@ void tempSensors() {
 
 void oilPressure() {
   //Reading Analogue Pin 1 and converting to PSI
-    
+  //Linear from 0.5 Volts,   
     oil1= (25.0*((5.0*(analogRead(A2)/1023.0)) - 0.5)) - 2;         //Oil Pressure sensor in PSI (GREEN WIRE)
   
   
@@ -279,7 +279,10 @@ void exhaustTemp() {
 }
 
 void mapSensor () {
-  //Reading Analogue Pin 1  
+  //Reading Analogue Pin 1
+  //Sensor Model MPX4250AP  
+
+  
         pressureValue = analogRead(A1);               //Reads signal between 0 - 1023 from Analogue Pin 1 (YELLOW WIRE)
        
          boostPress =(((pressureValue/1023.0)+0.04)/0.004) * 0.145; //by 0.145 to calc psi 
