@@ -28,9 +28,10 @@ Genie genie;    //Initialises Screen Comunication
 #define RESETLINE 4
 
 //DS18B20 Sensor variables
-int temperature1;
-int temperature2;
-int temperature3;
+int engTemp;
+int ambTemp;
+int engTempClean;
+int ambTempClean;
 
 //MAX6675 variable
 int exhaustTemperature;
@@ -179,8 +180,7 @@ void loop()
         //Run the screen display loops
         
         tempSensors();            //Runs Temp Sensor Script
-        oilPressure();            //Runs Oil Pressure Script
-        batteryVoltage();         //Runs Battery Voltage Script           
+        oilPressure();            //Runs Oil Pressure Script          
         mapSensor();              //Runs Map Sensor Script
         dateTime();               //Runs dateTime() Script
         exhaustTemp();            //Runs exhaust temp script
@@ -196,14 +196,18 @@ void tempSensors() {
           //Request temperatures form all DS18b20 sensors on the common Bus (BLUE WIRE)
           sensors.requestTemperatures(); 
           //Reading temperature values form sensors
-          temperature1 = sensors.getTempCByIndex(0); //Temperature from coolant Sensor (BLUE WIRE)
-          //temperature3 = sensors.getTempCByIndex(1); //Temperature form 2nd Sensor on BUS (BLUE WIRE)
+          engTemp = sensors.getTempCByIndex(0); //Temperature from coolant Sensor (BLUE WIRE)
+          ambTemp = sensors.getTempCByIndex(1); //Temperature form 2nd Sensor on BUS (BLUE WIRE)
   
-          temperature2 = 10*temperature1;            //Multiple by 10 for Screen Display
-        
+          engTempClean = 10*engTemp;            //Multiple by 10 for Screen Display
+          ambTempClean = 10*ambTemp;            //Multiple by 10 for Screen Display
+          
           //Writing to touch screen display
-          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 3, temperature2/10); //Displays Coolant Temp as Digits (Form 1)
-          genie.WriteObject(GENIE_OBJ_GAUGE, 3, temperature2/10);      //Display Coolant Temp on horizontal gauge (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 3, engTempClean/10); //Displays Coolant Temp as Digits (Form 0)
+          genie.WriteObject(GENIE_OBJ_GAUGE, 3, engTempClean/10);      //Display Coolant Temp on horizontal gauge (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 6, 10);      //Display Coolant Temp as Digits (Form 3)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 5, ambTempClean/10);      //Display Ambient Temp on on Top (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 12, ambTempClean/10);      //Display Ambient Temp on on Top (Form 3)
 }
 
 void oilPressure() {
@@ -224,47 +228,7 @@ void oilPressure() {
       //Writing to touch screen display
       genie.WriteObject(GENIE_OBJ_LED_DIGITS, 2, oil1);    //Displays Oil Press as Digits (Form 0)
       genie.WriteObject(GENIE_OBJ_GAUGE, 2, oil1);         //Disiplays Oil Press on horizontal gauge (Form 0)
-      
-}
-
-void batteryVoltage() {
-  
-  mainBatteryRead.update();                                             //Updates Main Battery Value
-  mainBatteryValue = mainBatteryRead.getValue();                       //Reads signal between 0 - 1023 from Analogue Pin 1 (YELLOW WIRE)
-  mainBatteryVoltage = 10*mainBatteryValue*(mainBatteryDivider/1023.0); //Converts this to a Voltage between 0 and 150V (For Screen Display)
-
-  //Writing to touch screen display
-  genie.WriteObject(GENIE_OBJ_LED_DIGITS, 4, mainBatteryVoltage*errorCorrection);    //Displays Voltage as Digits (Form 0, Engine Monitor Screen)
-  genie.WriteObject(GENIE_OBJ_LED_DIGITS, 10, mainBatteryVoltage*errorCorrection);    //Displays Voltage as Digits (Form 5, Battery Mangement Screen) 
-   
-  auxBatteryRead.update();                                              //Updates Aux Battery Value
-  auxBatteryValue = auxBatteryRead.getValue();                          //Reads signal between 0 - 1023
-  auxBatteryVoltage = 10*auxBatteryValue*(auxBatteryDivider/1023.0);    //Converts this to a Voltage between 0 and 150V (For Screen Display)
-
-  //Writing to touch screen display
-  genie.WriteObject(GENIE_OBJ_LED_DIGITS, 5, auxBatteryVoltage*errorCorrection);    //Displays Voltage as Digits (Form 0, Engine Monitor Screen)
-  genie.WriteObject(GENIE_OBJ_LED_DIGITS, 11, auxBatteryVoltage*errorCorrection);    //Displays Voltage as Digits (Form 5, Battery Mangement Screen) 
-   
-  solarRead.update();                                                   //Updates Solar Battery value
-  solarValue = solarRead.getValue();                                    //Reads singal between 0 - 1023
-  solarVoltage = 10*solarValue*(solarDivider/1023.0);                   //Converts this to a Voltage between 0 and 150V (For Screen Display)
-
-  //Writing to touch screen display
-  genie.WriteObject(GENIE_OBJ_LED_DIGITS, 13, solarVoltage*errorCorrection);    //Displays Voltage as Digits (Form 5, Battery Management Screen)
-
-}
-
-void batteryCharger() {
-
-
-
-  if (digitalRead(chargerLED) == HIGH) {
-        
-      genie.WriteObject(GENIE_OBJ_USER_LED, 0x00, 1);     //If pin is High - battery is charging
-    
-  }
-      genie.WriteObject(GENIE_OBJ_USER_LED, 0x00, 0);    //If pin is Low - battery is not charging
-      
+      genie.WriteObject(GENIE_OBJ_GAUGE, 11, oil1);         //Disiplays Oil Press on horizontal gauge (Form 3)
 }
 
 
@@ -274,6 +238,7 @@ void exhaustTemp() {
 
     //Writing to touch screen display
     genie.WriteObject(GENIE_OBJ_LED_DIGITS, 1, exhaustTemperature);    //Displays EGT as Digits (Form 0)
+    genie.WriteObject(GENIE_OBJ_LED_DIGITS, 9, exhaustTemperature);    //Displays EGT as Digits (Form 0)
     genie.WriteObject(GENIE_OBJ_GAUGE, 1, exhaustTemperature);         //Displays EGT on horizontal gauge (Form 0)
 
 }
@@ -295,6 +260,7 @@ void mapSensor () {
          }
         
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 0, boostPress2); //Displays MAP on LED Digits (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 10, boostPress2); //Displays MAP on LED Digits (Form 0)
           genie.WriteObject(GENIE_OBJ_GAUGE, 0, boostPress2);      //Displays MAP on horizontal gauge (Form 0)
 
 }
@@ -415,7 +381,5 @@ void dateTime () {
 
     genie.WriteObject(GENIE_OBJ_LED_DIGITS, 7, monthday);
     genie.WriteObject(GENIE_OBJ_LED_DIGITS, 8, hourminute);
-
+    genie.WriteObject(GENIE_OBJ_LED_DIGITS, 4, hourminute);
 }
-
-
