@@ -19,8 +19,18 @@ int dateminute;
 int datehour;
 int hourminute;
 
-//Fuel pumps
-int fuelPump = 38;
+//Global
+boolean engineOn;
+
+//Fuel pump
+boolean pumpAuto;
+boolean pumpOn;
+boolean pumpOff;
+
+int autoSwitch;
+int onoffSwitch;
+
+int fuelPump = 10;
 int auxPump = 36;
 
 //4D Systems Display
@@ -30,8 +40,6 @@ Genie genie;    //Initialises Screen Comunication
 //DS18B20 Sensor variables
 int engTemp;
 int ambTemp;
-int engTempClean;
-int ambTempClean;
 
 //MAX6675 variable
 int exhaustTemperature;
@@ -51,31 +59,6 @@ MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
 OneWire oneWire(ONE_WIRE_BUS);          // Setup a oneWire instance to communicate with any OneWire devices 
 DallasTemperature sensors(&oneWire);    // Pass our oneWire reference to Dallas Temperature.
 
-//Battery Monitor Variables
-ResponsiveAnalogRead mainBatteryRead(A5, true);     //Responsive Analogue Read Library reading Analogue 5 Pin (Main Battery)
-ResponsiveAnalogRead auxBatteryRead(A4, true);      //Responsive Analogue Read Libary reading Analogue 6 Pin, Wire #2 (Aux Battery)
-ResponsiveAnalogRead solarRead(A3, true);           //Responsive Analogue Read Libary reading Analogue 7 Pin, Wire #4 (Solar input)
-
-int mainBatteryValue;                               //Input value from voltage divider,range 0:1023
-float mainBatteryVoltage;                          //Stores voltage as float to get more accuracy
-float mainBatteryDivider;
-int mainResistor1 = 19900;
-int mainResistor2 = 10020;
-
-int auxBatteryValue;                               //Input value from voltage divider,range 0:1023
-float auxBatteryVoltage;                           //Stores voltage as float to get more accuracy
-float auxBatteryDivider;
-int auxResistor1 = 20000;
-int auxResistor2 = 10030; 
-
-int solarValue;
-float solarVoltage;
-float solarDivider;
-int solarResistor1 = 29820;
-int solarResistor2 = 10010;
-
-float errorCorrection = 1.026;
-float auxBatteryCurrent;
 
 //MAP Sensor Variables
 int pressureValue;  //Input value from pressure sensor, range 0:1023
@@ -111,7 +94,7 @@ int revCamera = 34;
 //Millis
 unsigned long startMillis;  //some global variables available anywhere in the program
 unsigned long currentMillis;
-const unsigned long period = 350;  //the value is a number of milliseconds
+const unsigned long period = 2000;  //the value is a number of milliseconds
 
 void setup() 
 {
@@ -130,6 +113,7 @@ void setup()
   pinMode(fuelPump, OUTPUT);
   pinMode(auxPump, OUTPUT);
 
+
   //PinMode Reverse Camera
   pinMode(revCamera, OUTPUT);
 
@@ -140,16 +124,6 @@ void setup()
   //Contrast
   contrast = dayContrast;
 
-  //mainBatteryVoltage Divider
-  mainBatteryDivider = (float) 10*(mainResistor1 + mainResistor2)/mainResistor1;
-
-  //auxBatteryVoltage Divider
-  auxBatteryDivider = (float) 10*(auxResistor1 + auxResistor2)/auxResistor1;
-
-  //solarBatteryVoltage Divider
-  //solarDivider = (float) 14.93*(solarResistor1 + solarResistor2)/solarResistor1;
-    solarDivider = 20.0;
-  
 
   //Begin Real Time Clock
   rtc.begin();
@@ -164,18 +138,22 @@ void setup()
   delay(2000);
   digitalWrite(RESETLINE, 0);  // unReset the Display via D4
   delay(5000); //let the display start up after the reset (This is important)
+
+  //Fuel pump Mode Auto by default
+  digitalWrite(fuelPump, LOW);
+  genie.WriteObject(GENIE_OBJ_4DBUTTON,0,1);
+  pumpAuto = true;
     
 } 
 void loop()
 {
 
-  Serial.println("Loop Beginning");
 
   currentMillis = millis();  //get the current "time" (actually the number of milliseconds since the program started)
 
   if (currentMillis - startMillis >= period)  //test whether the period has elapsed
   {
-      Serial.println("Hello World!");
+
 
         //Run the screen display loops
         
@@ -184,6 +162,7 @@ void loop()
         mapSensor();              //Runs Map Sensor Script
         dateTime();               //Runs dateTime() Script
         exhaustTemp();            //Runs exhaust temp script
+        liftPump();
         
         genie.DoEvents();         //Check for events from Screen
   
@@ -198,16 +177,13 @@ void tempSensors() {
           //Reading temperature values form sensors
           engTemp = sensors.getTempCByIndex(0); //Temperature from coolant Sensor (BLUE WIRE)
           ambTemp = sensors.getTempCByIndex(1); //Temperature form 2nd Sensor on BUS (BLUE WIRE)
-  
-          engTempClean = 10*engTemp;            //Multiple by 10 for Screen Display
-          ambTempClean = 10*ambTemp;            //Multiple by 10 for Screen Display
           
           //Writing to touch screen display
-          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 3, engTempClean/10); //Displays Coolant Temp as Digits (Form 0)
-          genie.WriteObject(GENIE_OBJ_GAUGE, 3, engTempClean/10);      //Display Coolant Temp on horizontal gauge (Form 0)
-          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 6, 10);      //Display Coolant Temp as Digits (Form 3)
-          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 5, ambTempClean/10);      //Display Ambient Temp on on Top (Form 0)
-          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 12, ambTempClean/10);      //Display Ambient Temp on on Top (Form 3)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 3, engTemp); //Displays Coolant Temp as Digits (Form 0)
+          genie.WriteObject(GENIE_OBJ_GAUGE, 3, engTemp);      //Display Coolant Temp on horizontal gauge (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 6, ambTemp);      //Display Ambient Temp on on Top (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 5, ambTemp);      //Display Ambient Temp on on Top (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 12, ambTemp);      //Display Ambient Temp on on Top (Form 3)
 }
 
 void oilPressure() {
@@ -215,20 +191,19 @@ void oilPressure() {
   //Linear from 0.5 Volts,   
     oil1= (25.0*((5.0*(analogRead(A2)/1023.0)) - 0.5)) - 2;         //Oil Pressure sensor in PSI (GREEN WIRE)
   
-  
-  /*if (oil1 > 5) {
+    if (oil1 < 5) {
 
-    digitalWrite(fuelPump, HIGH);  //Write high to turn fuel pump on
+      engineOn = true;
+      
+    } else {
 
-  } else {
-
-    digitalWrite(fuelPump, LOW);
-  }*/
+      engineOn = false;
+    }
 
       //Writing to touch screen display
       genie.WriteObject(GENIE_OBJ_LED_DIGITS, 2, oil1);    //Displays Oil Press as Digits (Form 0)
       genie.WriteObject(GENIE_OBJ_GAUGE, 2, oil1);         //Disiplays Oil Press on horizontal gauge (Form 0)
-      genie.WriteObject(GENIE_OBJ_GAUGE, 11, oil1);         //Disiplays Oil Press on horizontal gauge (Form 3)
+      genie.WriteObject(GENIE_OBJ_LED_DIGITS, 11, oil1);         //Disiplays Oil Press on horizontal gauge (Form 3)
 }
 
 
@@ -287,6 +262,36 @@ void mapSensor () {
 
 }
 */
+
+void liftPump () {
+
+    if (pumpOn == true)
+    {
+      digitalWrite(fuelPump, HIGH);
+      Serial.println("Pump on");
+      return;
+    }
+
+    if (engineOn == true && pumpAuto == true)
+    {
+      digitalWrite(fuelPump, HIGH);
+      Serial.println("Pump on");
+    }
+
+    if (engineOn == true && pumpAuto == false)
+    {
+      digitalWrite(fuelPump, LOW);
+      Serial.println("Pump off");
+    }
+    
+
+    if (pumpOff == true && pumpAuto == false)
+    {
+      digitalWrite(fuelPump, LOW);
+      Serial.println("Pump off");
+    }
+    
+}
     
 // Event Handler for comms from Screen
  void myGenieEventHandler(void)
@@ -298,48 +303,47 @@ void mapSensor () {
   //If the cmd received is from a Reported Event (Events triggered from the Events tab of Workshop4 objects)
   if (Event.reportObject.cmd == GENIE_REPORT_EVENT)
   {
-    if (Event.reportObject.object == GENIE_OBJ_WINBUTTON)              // If the Reported Message was from a WIN Button
+    if (Event.reportObject.object == GENIE_OBJ_4DBUTTON)              // If the Reported Message was from a WIN Button
     {
       if (Event.reportObject.index == 0)                              // If Button (Index = 0), Tank is full
       {
-        genie.WriteObject(GENIE_OBJ_LED_DIGITS, 9, 120);              //Write to digits saying Tank is full
-      }
-      if (Event.reportObject.index == 1)                              // If Button (Index = 1), 20 Litres option
-      { 
-          if (auxTankEna20 == false)
+        //Auto Rocker ON will run on oil pressure only
+        //If other switch goes to "ON", turn off AUTO and remain ON
+        //If other switch goes to "OFF", turn off pump
+        
+        autoSwitch = genie.GetEventData(&Event);
+        Serial.println(autoSwitch);
+
+        if (autoSwitch == 0)
         {
-          digitalWrite(auxPump, HIGH);                                //Turn pump on
-          auxTankEna20 = true;
-
-          genie.WriteObject(GENIE_OBJ_USER_LED, 2, 1);                //Turn LED on
-          startMillis = millis();                                     //Start the timer
-          
-        } else if (auxTankEna20 == true)
-          {
-            digitalWrite(auxPump, LOW);                               //Turn pump off
-            auxTankEna20 = false;                                     //Start the timer
-
-            genie.WriteObject(GENIE_OBJ_USER_LED, 2, 0);              //Turn LED off
-          
+          pumpAuto = false;
+        } else if (autoSwitch == 1)
+        {
+          pumpAuto = true;
+          genie.WriteObject(GENIE_OBJ_4DBUTTON,1,0);
         }
-      }   
-      if (Event.reportObject.index == 2)                              // If Button (Index = 2), 40 Litres option
-      {
-          if (auxTankEna40 == false)
-        {
-          digitalWrite(auxPump, HIGH);                                //Turn pump on
-          auxTankEna40 = true;
-
-          genie.WriteObject(GENIE_OBJ_USER_LED, 2, 1);                //Turn LED on
-          
-        } else if (auxTankEna40 == true)
-          {
-            digitalWrite(auxPump, LOW);                               //Turn pump off
-            auxTankEna40 = false;
-
-            genie.WriteObject(GENIE_OBJ_USER_LED, 2, 0);              //Turn LED off
+        
+      
       }
-    }
+      if (Event.reportObject.index == 1)            
+      { 
+         onoffSwitch = genie.GetEventData(&Event);
+         if (onoffSwitch == 0)
+         {
+           pumpOff = true;
+           pumpOn = false;
+           pumpAuto = false;
+           
+         } else if (onoffSwitch == 1)
+         {
+           pumpOn = true;
+           pumpAuto = false;
+           genie.WriteObject(GENIE_OBJ_4DBUTTON,0,0);
+         }
+         
+         
+      }   
+      
   } 
   
     
