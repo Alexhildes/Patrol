@@ -157,7 +157,7 @@ void loop()
 
         //Run the screen display loops
         
-        tempSensors();            //Runs Temp Sensor Script
+        tempSensors();            //Runs Temp Sensor Script 
         oilPressure();            //Runs Oil Pressure Script          
         mapSensor();              //Runs Map Sensor Script
         dateTime();               //Runs dateTime() Script
@@ -181,7 +181,7 @@ void tempSensors() {
           //Writing to touch screen display
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 3, engTemp); //Displays Coolant Temp as Digits (Form 0)
           genie.WriteObject(GENIE_OBJ_GAUGE, 3, engTemp);      //Display Coolant Temp on horizontal gauge (Form 0)
-          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 6, ambTemp);      //Display Ambient Temp on on Top (Form 0)
+          genie.WriteObject(GENIE_OBJ_LED_DIGITS, 6, engTemp);      //Display Ambient Temp on on Top (Form 0)
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 5, ambTemp);      //Display Ambient Temp on on Top (Form 0)
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 12, ambTemp);      //Display Ambient Temp on on Top (Form 3)
 }
@@ -191,7 +191,7 @@ void oilPressure() {
   //Linear from 0.5 Volts,   
     oil1= (25.0*((5.0*(analogRead(A2)/1023.0)) - 0.5)) - 2;         //Oil Pressure sensor in PSI (GREEN WIRE)
   
-    if (oil1 < 5) {
+    if (oil1 > 5) {
 
       engineOn = true;
       
