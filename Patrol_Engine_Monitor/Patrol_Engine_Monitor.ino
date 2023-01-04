@@ -94,11 +94,12 @@ int revCamera = 34;
 //Millis
 unsigned long startMillis;  //some global variables available anywhere in the program
 unsigned long currentMillis;
-const unsigned long period = 2000;  //the value is a number of milliseconds
+const unsigned long period = 350;  //the value is a number of milliseconds
 
 void setup() 
 {
 
+  
   startMillis = millis();  //initial start time
 
   //Serial configurations
@@ -108,14 +109,11 @@ void setup()
 
   genie.AttachEventHandler(myGenieEventHandler); // Attach the user function Event Handler for processing events
 
-
+  Serial.println("Beginning Setup");
+  
   //PinMode Fuel pumps
   pinMode(fuelPump, OUTPUT);
   pinMode(auxPump, OUTPUT);
-
-
-  //PinMode Reverse Camera
-  pinMode(revCamera, OUTPUT);
 
 
   //Temperature Sensors begin
@@ -143,6 +141,8 @@ void setup()
   digitalWrite(fuelPump, LOW);
   genie.WriteObject(GENIE_OBJ_4DBUTTON,0,1);
   pumpAuto = true;
+
+  Serial.println("End Setup");
     
 } 
 void loop()
@@ -156,6 +156,7 @@ void loop()
 
 
         //Run the screen display loops
+        Serial.println("Beginning Loop");
         
         tempSensors();            //Runs Temp Sensor Script 
         oilPressure();            //Runs Oil Pressure Script          
@@ -166,7 +167,7 @@ void loop()
         
         genie.DoEvents();         //Check for events from Screen
   
-        Serial.println("Main Loop");
+        Serial.println("Main Loop End");
         startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED state.
     }
 }
@@ -184,6 +185,8 @@ void tempSensors() {
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 6, engTemp);      //Display Ambient Temp on on Top (Form 0)
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 5, ambTemp);      //Display Ambient Temp on on Top (Form 0)
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 12, ambTemp);      //Display Ambient Temp on on Top (Form 3)
+
+          Serial.println("Temp Sensors Complete");
 }
 
 void oilPressure() {
@@ -204,6 +207,8 @@ void oilPressure() {
       genie.WriteObject(GENIE_OBJ_LED_DIGITS, 2, oil1);    //Displays Oil Press as Digits (Form 0)
       genie.WriteObject(GENIE_OBJ_GAUGE, 2, oil1);         //Disiplays Oil Press on horizontal gauge (Form 0)
       genie.WriteObject(GENIE_OBJ_LED_DIGITS, 11, oil1);         //Disiplays Oil Press on horizontal gauge (Form 3)
+
+      Serial.println("Oil Pressure Complete");
 }
 
 
@@ -215,6 +220,8 @@ void exhaustTemp() {
     genie.WriteObject(GENIE_OBJ_LED_DIGITS, 1, exhaustTemperature);    //Displays EGT as Digits (Form 0)
     genie.WriteObject(GENIE_OBJ_LED_DIGITS, 9, exhaustTemperature);    //Displays EGT as Digits (Form 0)
     genie.WriteObject(GENIE_OBJ_GAUGE, 1, exhaustTemperature);         //Displays EGT on horizontal gauge (Form 0)
+
+    Serial.println("Oil Pressure Complete");
 
 }
 
@@ -237,6 +244,8 @@ void mapSensor () {
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 0, boostPress2); //Displays MAP on LED Digits (Form 0)
           genie.WriteObject(GENIE_OBJ_LED_DIGITS, 10, boostPress2); //Displays MAP on LED Digits (Form 0)
           genie.WriteObject(GENIE_OBJ_GAUGE, 0, boostPress2);      //Displays MAP on horizontal gauge (Form 0)
+
+          Serial.println("Map complete");
 
 }
 
